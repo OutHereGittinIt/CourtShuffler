@@ -7,8 +7,8 @@ function court_shuffler
 dbstop if error
 
 num_rounds          = 20;
-num_courts          = 32;
-num_cols            = 8;
+num_courts          = 16;
+num_cols            = 6;
 
 opts.axes_sz        = [700,700];
 opts.bias_strength  = .2;
@@ -18,8 +18,8 @@ opts.court_lw       = 1.5;
 opts.court_spacer   = 25;
 opts.court_sz       = [100,180];
 opts.left_tab_w     = 500;
-opts.step_sz        = 7.5;
-opts.dt             = .01;
+opts.step_sz        = 10;
+opts.dt             = .001;
 opts.player_ms      = 30; % player marker size
 opts.player_pos_in  = 25;
 opts.serive_line    = .33;
@@ -47,6 +47,7 @@ for round = 1:num_rounds
     Players = advance_round(f,Players,court_pos,Xmin,Xmax,opts);
     fprintf('Finished round %d\n',round) % ~~~ rmv and substitute for
 end
+fprintf('done\n')
 end
 
 function [f,ax_obj,court_pos] = create_courts(num_courts,num_cols,opts)
@@ -383,7 +384,7 @@ corr_plot = findobj(f,'Tag','Correlation Plot');
 
 % add new datapoint to plot object ydata and ydata
 new_ydata = [corr_plot.YData,Rcoeff];
-new_xdata = [corr_plot.XData,numel(corr_plot.XData) + 1];
+new_xdata = [corr_plot.XData,numel(corr_plot.XData)];
 set(corr_plot,'XData',new_xdata,'YData',new_ydata)
 end
 
