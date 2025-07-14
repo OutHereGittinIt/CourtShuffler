@@ -5,7 +5,6 @@ function court_shuffler
 % 5/3/2025
 
 dbstop if error
-hold on, grid on, axis equal
 
 num_rounds          = 20;
 num_courts          = 32;
@@ -19,8 +18,8 @@ opts.court_lw       = 1.5;
 opts.court_spacer   = 25;
 opts.court_sz       = [100,180];
 opts.left_tab_w     = 500;
-opts.step_sz        = 5;
-opts.dt             = .05;
+opts.step_sz        = 7.5;
+opts.dt             = .01;
 opts.player_ms      = 30; % player marker size
 opts.player_pos_in  = 25;
 opts.serive_line    = .33;
@@ -33,7 +32,7 @@ opts.spacer         = 7;
 Players = create_players(court_axes,num_courts,court_pos,opts);
 
 % correlation plot (duh)
-add_correlation_plot(f,opts);
+add_correlation_plot(f,Players,opts);
 
 % ~~~ I forgot what this does or why its needed
 Xmin = court_axes.XLim(1);
@@ -56,6 +55,9 @@ function [f,ax_obj,court_pos] = create_courts(num_courts,num_cols,opts)
 % create uifigure and uiaxes
 f = uifigure('Name','Court Shuffler');
 ax_obj = uiaxes(f);
+hold(ax_obj,'on')
+grid(ax_obj,'on')
+axis(ax_obj,'equal')
 
 % return positions -- currently just single-file horizontal
 if num_courts <= num_cols
@@ -79,7 +81,7 @@ draw_line = @(x,y,court_ind) plot(ax_obj,court_pos(court_ind,1) + x,court_pos(co
 for court_ind = 1:num_courts
     
     % court
-    rectangle('Position',[court_pos(court_ind,:),opts.court_sz],"FaceColor",opts.court_clr);
+    rectangle(ax_obj,'Position',[court_pos(court_ind,:),opts.court_sz],"FaceColor",opts.court_clr);
     
     % lines :
     % perimeter 
@@ -184,7 +186,7 @@ annimate_movement(Players,court_pos,Xmin,Xmax,opts)
 % calculate and show new correlation stats
 update_correlation_plot(f,Players)
 
-update_round_coutner()
+update_game_counter(f,opts)
 end
 
 function Players = play_games(Players,num_courts,opts)
@@ -356,28 +358,25 @@ for row_ind = 1:num_rows
 end
 end
 
-function add_correlation_plot(f,opts)
+function add_correlation_plot(f,Players,opts)
 %% Add Correlation Plot
 
 % create axes for correlation plot
 a = uiaxes(f,'Position',[opts.spacer,opts.spacer,opts.left_tab_w,opts.corr_ax_h]);
 a.Title.String = 'R-coefficient for player skill level and court number';
 
+% get initial r-coeff (should be low for random distribution)
+Rcoeff  = get_court_skill_rcoeff(Players);
+
 % add line
-plot(a,[],[],'Tag','Correlation Plot');
+plot(a,0,Rcoeff,'Tag','Correlation Plot');
 end
 
 function update_correlation_plot(f,Players)
 %% calculate and show new correlation stats
-% actually you dont need round, you just add to ydata
 
 % calculate R coef.
-
-% ok we want the r coef. for player skill and player court
-
-% we obviously need a label for that
-LM      = fitlm([Players.Court],[Players.Skill]);
-Rcoeff  = LM.Rsquared.Ordinary;
+Rcoeff  = get_court_skill_rcoeff(Players);
 
 % find or create plot object
 corr_plot = findobj(f,'Tag','Correlation Plot');
@@ -386,4 +385,14 @@ corr_plot = findobj(f,'Tag','Correlation Plot');
 new_ydata = [corr_plot.YData,Rcoeff];
 new_xdata = [corr_plot.XData,numel(corr_plot.XData) + 1];
 set(corr_plot,'XData',new_xdata,'YData',new_ydata)
+end
+
+function Rcoeff  = get_court_skill_rcoeff(Players)
+%% Return R coefficient for player skill level and current court number
+LM      = fitlm([Players.Court],[Players.Skill]);
+Rcoeff  = LM.Rsquared.Ordinary;
+end
+
+function update_game_counter(f,opts)
+%% Update the game counter
 end
