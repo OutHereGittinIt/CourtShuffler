@@ -6,7 +6,7 @@ function court_shuffler
 
 dbstop if error
 
-num_rounds          = 20;
+num_rounds          = 3;
 num_courts          = 16;
 num_cols            = 6;
 
@@ -40,8 +40,11 @@ Xmax = court_axes.XLim(2);
 court_axes.XLimMode = 'manual';
 court_axes.XLim = [Xmin,Xmax];
 
+court_axes.YLimMode = 'manual';
+court_axes.YLim = court_axes.YLim + [-opts.spacer,opts.spacer];
+
 % iterate rounds
-pause(1)
+pause(2)
 for round = 1:num_rounds
     pause(.5)
     Players = advance_round(f,Players,court_pos,Xmin,Xmax,opts);
@@ -53,12 +56,14 @@ end
 function [f,ax_obj,court_pos] = create_courts(num_courts,num_cols,opts)
 %% Draw courts and assign positions
 
-% create uifigure and uiaxes
+% create uifigure and uiaxes ("game axis")
 f = uifigure('Name','Court Shuffler');
 ax_obj = uiaxes(f);
 hold(ax_obj,'on')
 grid(ax_obj,'on')
 axis(ax_obj,'equal')
+xticklabels(ax_obj,{})
+yticklabels(ax_obj,{})
 
 % return positions -- currently just single-file horizontal
 if num_courts <= num_cols
@@ -70,8 +75,11 @@ else
     [court_pos,num_rows] = set_court_pos_matrix(num_courts,num_cols,opts);
 end
 
+% ** game axis y0
+GameAxisY0 = -55;
+
 % sizing for axes and uifigure
-ax_obj.Position = [opts.left_tab_w + opts.spacer,opts.spacer,opts.axes_sz];
+ax_obj.Position = [opts.left_tab_w + opts.spacer,GameAxisY0,opts.axes_sz];
 f.Position(3:4) = opts.axes_sz + [opts.left_tab_w + 3*opts.spacer,2*opts.spacer];
 centerfig(f)
 
@@ -364,10 +372,12 @@ function add_correlation_plot(f,Players,opts)
 
 % create axes for correlation plot
 a = uiaxes(f,'Position',[opts.spacer,opts.spacer,opts.left_tab_w,opts.corr_ax_h]);
-a.Title.String = 'R-coefficient for player skill level and court number';
+a.Title.String  = 'R-coefficient for player skill level and court number';
+a.XLabel.String = 'Games Played';
+a.YLabel.String = 'R coefficient';
 
 % get initial r-coeff (should be low for random distribution)
-Rcoeff  = get_court_skill_rcoeff(Players);
+Rcoeff = get_court_skill_rcoeff(Players);
 
 % add line
 plot(a,0,Rcoeff,'Tag','Correlation Plot');
