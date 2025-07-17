@@ -5,61 +5,92 @@ function court_shuffler
 % 5/3/2025
 
 dbstop if error
-hold on, grid on, axis equal
 
-num_rounds          = 40;
-num_courts          = 32;
-num_cols            = 8;
+num_rounds          = 3;
+num_courts          = 16;
+num_cols            = 6;
 
+opts.axes_sz        = [700,700];
 opts.bias_strength  = .2;
+opts.corr_ax_h      = 400; % correlation plot axes height
 opts.court_clr      = [.6,.9,.55];
 opts.court_lw       = 1.5;
 opts.court_spacer   = 25;
 opts.court_sz       = [100,180];
-opts.step_sz        = 5;
-opts.dt             = .0005;
+opts.left_tab_w     = 500;
+opts.step_sz        = 10;
+opts.dt             = .001;
 opts.player_ms      = 30; % player marker size
 opts.player_pos_in  = 25;
 opts.serive_line    = .33;
+opts.spacer         = 7;
 
+% draw courts
+[f,court_axes,court_pos] = create_courts(num_courts,num_cols,opts);
 
-court_pos = create_courts(num_courts,num_cols,opts);
+% draw players
+Players = create_players(court_axes,num_courts,court_pos,opts);
 
-Players = create_players(num_courts,court_pos,opts);
+% correlation plot (duh)
+add_correlation_plot(f,Players,opts);
 
-ax_obj = gca();
-Xmin = ax_obj.XLim(1);
-Xmax = ax_obj.XLim(2);
-ax_obj.XLimMode = 'manual';
-ax_obj.XLim = [Xmin,Xmax];
-pause(1)
+% ~~~ I forgot what this does or why its needed
+Xmin = court_axes.XLim(1);
+Xmax = court_axes.XLim(2);
+court_axes.XLimMode = 'manual';
+court_axes.XLim = [Xmin,Xmax];
+
+court_axes.YLimMode = 'manual';
+court_axes.YLim = court_axes.YLim + [-opts.spacer,opts.spacer];
+
+% iterate rounds
+pause(2)
 for round = 1:num_rounds
     pause(.5)
-    Players = advance_round(Players,court_pos,Xmin,Xmax,opts);
-    fprintf('Finished round %d\n',round)
+    Players = advance_round(f,Players,court_pos,Xmin,Xmax,opts);
+    fprintf('Finished round %d\n',round) % ~~~ rmv and substitute for
 end
+fprintf('done\n')
 end
 
-function court_pos = create_courts(num_courts,num_cols,opts)
+function [f,ax_obj,court_pos] = create_courts(num_courts,num_cols,opts)
 %% Draw courts and assign positions
+
+% create uifigure and uiaxes ("game axis")
+f = uifigure('Name','Court Shuffler');
+ax_obj = uiaxes(f);
+hold(ax_obj,'on')
+grid(ax_obj,'on')
+axis(ax_obj,'equal')
+xticklabels(ax_obj,{})
+yticklabels(ax_obj,{})
 
 % return positions -- currently just single-file horizontal
 if num_courts <= num_cols
     court_ind   = 1:num_courts;
     court_pos_x = (court_ind-1)*opts.court_sz(1) + court_ind*opts.court_spacer;
     court_pos   = [court_pos_x',zeros(num_courts,1)];
+    num_rows    = 1;
 else
-    court_pos = set_court_pos_matrix(num_courts,num_cols,opts);
+    [court_pos,num_rows] = set_court_pos_matrix(num_courts,num_cols,opts);
 end
 
-% function ahndle for line drawing
-draw_line = @(x,y,court_ind) plot(court_pos(court_ind,1) + x,court_pos(court_ind,2) + y,"Color",[1,1,1],'LineWidth',opts.court_lw);
+% ** game axis y0
+GameAxisY0 = -55;
+
+% sizing for axes and uifigure
+ax_obj.Position = [opts.left_tab_w + opts.spacer,GameAxisY0,opts.axes_sz];
+f.Position(3:4) = opts.axes_sz + [opts.left_tab_w + 3*opts.spacer,2*opts.spacer];
+centerfig(f)
+
+% function handle for line drawing
+draw_line = @(x,y,court_ind) plot(ax_obj,court_pos(court_ind,1) + x,court_pos(court_ind,2) + y,"Color",[1,1,1],'LineWidth',opts.court_lw);
 
 % draw courts
 for court_ind = 1:num_courts
     
     % court
-    rectangle('Position',[court_pos(court_ind,:),opts.court_sz],"FaceColor",opts.court_clr);
+    rectangle(ax_obj,'Position',[court_pos(court_ind,:),opts.court_sz],"FaceColor",opts.court_clr);
     
     % lines :
     % perimeter 
@@ -80,7 +111,7 @@ for court_ind = 1:num_courts
 end
 end
 
-function Players = create_players(num_courts,court_pos,opts)
+function Players = create_players(court_axes,num_courts,court_pos,opts)
 %% create players w/ random skill, distribute among courts
 
 player_count = 0;
@@ -110,7 +141,7 @@ for court_ind = 1:num_courts
         pos = get_pos(Players(player_count),court_pos,opts);
 
         % plot and store object
-        Players(player_count).Object = plot(pos(1),pos(2),'Color',color,'Marker','.','MarkerSize',opts.player_ms);
+        Players(player_count).Object = plot(court_axes,pos(1),pos(2),'Color',color,'Marker','.','MarkerSize',opts.player_ms);
     end
 end
 end
@@ -142,7 +173,7 @@ end
 pos(1) = pos(1) + delta_x;
 end
 
-function Players = advance_round(Players,court_pos,Xmin,Xmax,opts)
+function Players = advance_round(f,Players,court_pos,Xmin,Xmax,opts)
 %% Play next game and move players around with animation (one round)
 
 num_courts = height(court_pos);
@@ -158,7 +189,13 @@ end
 % sort teams and sides
 Players = sort_new_teams(Players,num_courts);
 
+% move players to new game
 annimate_movement(Players,court_pos,Xmin,Xmax,opts)
+
+% calculate and show new correlation stats
+update_correlation_plot(f,Players)
+
+update_game_counter(f,opts)
 end
 
 function Players = play_games(Players,num_courts,opts)
@@ -304,7 +341,7 @@ for step = 1:total_steps
 end
 end
 
-function court_pos = set_court_pos_matrix(num_courts,num_cols,opts)
+function [court_pos,num_rows] = set_court_pos_matrix(num_courts,num_cols,opts)
 %% Return court positions for multiple rows of courts
 
 court_ind = 0;
@@ -328,4 +365,45 @@ for row_ind = 1:num_rows
         court_pos(court_ind,:) = [xpos,ypos];
     end
 end
+end
+
+function add_correlation_plot(f,Players,opts)
+%% Add Correlation Plot
+
+% create axes for correlation plot
+a = uiaxes(f,'Position',[opts.spacer,opts.spacer,opts.left_tab_w,opts.corr_ax_h]);
+a.Title.String  = 'R-coefficient for player skill level and court number';
+a.XLabel.String = 'Games Played';
+a.YLabel.String = 'R coefficient';
+
+% get initial r-coeff (should be low for random distribution)
+Rcoeff = get_court_skill_rcoeff(Players);
+
+% add line
+plot(a,0,Rcoeff,'Tag','Correlation Plot');
+end
+
+function update_correlation_plot(f,Players)
+%% calculate and show new correlation stats
+
+% calculate R coef.
+Rcoeff  = get_court_skill_rcoeff(Players);
+
+% find or create plot object
+corr_plot = findobj(f,'Tag','Correlation Plot');
+
+% add new datapoint to plot object ydata and ydata
+new_ydata = [corr_plot.YData,Rcoeff];
+new_xdata = [corr_plot.XData,numel(corr_plot.XData)];
+set(corr_plot,'XData',new_xdata,'YData',new_ydata)
+end
+
+function Rcoeff  = get_court_skill_rcoeff(Players)
+%% Return R coefficient for player skill level and current court number
+LM      = fitlm([Players.Court],[Players.Skill]);
+Rcoeff  = LM.Rsquared.Ordinary;
+end
+
+function update_game_counter(f,opts)
+%% Update the game counter
 end
