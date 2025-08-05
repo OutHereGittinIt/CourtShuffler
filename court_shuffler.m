@@ -6,9 +6,9 @@ function court_shuffler
 
 dbstop if error
 
-num_rounds          = 3;
-num_courts          = 16;
-num_cols            = 6;
+num_rounds          = 10;
+num_courts          = 8;
+num_cols            = 4;
 
 opts.axes_sz        = [700,700];
 opts.bias_strength  = .2;
@@ -18,8 +18,8 @@ opts.court_lw       = 1.5;
 opts.court_spacer   = 25;
 opts.court_sz       = [100,180];
 opts.left_tab_w     = 500;
-opts.step_sz        = 10;
-opts.dt             = .001;
+opts.step_sz        = 12.5;
+opts.dt             = .05;
 opts.player_ms      = 30; % player marker size
 opts.player_pos_in  = 25;
 opts.serive_line    = .33;
